@@ -281,4 +281,23 @@
     if(active?.playing)active.timeline.resume();
   });
   reduced.addEventListener('change',()=>{if(reduced.matches)entries.forEach(e=>{e.timeline.progress(1).pause();e.videos.forEach(v=>v.pause());});});
+  // Hover tips: a shape with data-tip="id" shows its stage's [data-tip-id="id"] content.
+  // Mouse hover shows it; on touch, a tap shows it and a tap elsewhere hides it.
+  const tip=document.createElement('div');tip.className='slide-tip';tip.setAttribute('role','tooltip');tip.hidden=true;document.body.append(tip);
+  let tipTarget=null;
+  function showTip(target) {
+    const content=target.closest('.slide-stage')?.querySelector(`[data-tip-id="${target.dataset.tip}"]`);
+    if(!content)return;
+    tipTarget=target;tip.replaceChildren(...[...content.childNodes].map(n=>n.cloneNode(true)));tip.hidden=false;
+    const r=target.getBoundingClientRect(), w=tip.offsetWidth, h=tip.offsetHeight;
+    const above=r.top-h-8>=0;
+    tip.style.left=`${Math.min(Math.max(r.left+r.width/2-w/2,8),innerWidth-w-8)}px`;
+    tip.style.top=`${above?r.top-h-8:r.bottom+8}px`;
+  }
+  function hideTip(){tip.hidden=true;tipTarget=null;}
+  document.addEventListener('pointerover',e=>{const t=e.pointerType!=='touch'&&e.target.closest?.('[data-tip]');if(t)showTip(t);});
+  document.addEventListener('pointerout',e=>{if(e.pointerType!=='touch'&&e.target.closest?.('[data-tip]'))hideTip();});
+  document.addEventListener('click',e=>{const t=e.target.closest?.('[data-tip]');if(!t)hideTip();else if(t!==tipTarget)showTip(t);});
+  for(const type of ['scroll','wheel','resize'])addEventListener(type,hideTip,{capture:true,passive:true});
+  document.addEventListener('keydown',hideTip);
 })();
