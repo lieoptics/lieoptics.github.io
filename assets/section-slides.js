@@ -71,7 +71,7 @@
       const [name,...view]=entry.trim().split(/\s+/);
       const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
       svg.setAttribute('viewBox',view.join(' ')); svg.setAttribute('role','img'); svg.setAttribute('aria-label',`${label}: ${name}`);
-      svg.classList.add('mobile-art'); mobile.append(svg); return [name,svg];
+      svg.classList.add('mobile-art'); svg.style.setProperty('--units',view[2]); mobile.append(svg); return [name,svg];
     }));
     // Keep video in ordinary HTML: WebKit composites video outside SVG
     // foreignObject coordinates and ignores the surrounding SVG clip path.
@@ -120,7 +120,7 @@
           if(group===l.title || group===l.subtitle || !group.childElementCount) continue;
           (l.panels.get(group.dataset.panel) || l.first).append(group);
         }
-        l.panels.forEach(panel=>{panel.hidden=!panel.childElementCount;});
+        l.panels.forEach(panel=>{panel.hidden=!panel.childElementCount;panel.classList.toggle('figure',Boolean(panel.querySelector('image')));});
         if(l.media)l.mediaBlock.append(l.media);
       } else {
         l.groups.forEach(g=>l.source.append(g));
@@ -147,25 +147,13 @@
   }
   document.addEventListener('paper-layout',()=>requestAnimationFrame(placeSubtitles));
   window.addEventListener('resize',()=>requestAnimationFrame(placeSubtitles));
+  // Phone layout is sized by CSS (website.css, "Mobile slides"): text panels at one px per slide
+  // unit, figures fitted to the stage width, and a stage that ends above the controls and scrolls
+  // when its content is taller. Nothing is measured here, so there is nothing to go stale when the
+  // browser toolbar or safe areas change. Every phone stage is a scroll region; website.js asks it
+  // live whether it can still scroll. Desktop keeps its slide untouched.
   function fitSlides() {
-    for (const l of layouts) {
-      if (!narrow.matches) {
-        l.stage.style.removeProperty('height');
-        l.mobile.style.removeProperty('transform');
-        continue;
-      }
-      const page=l.stage.closest('[data-page]');
-      const css=getComputedStyle(page);
-      const available=Math.max(1,page.clientHeight-parseFloat(css.paddingTop)-parseFloat(css.paddingBottom));
-      if(l.media){
-        const diagramSpace=Math.max(1,available-l.media.offsetHeight-18);
-        l.panels.forEach(panel=>{panel.style.maxHeight=`${diagramSpace}px`;});
-      }
-      const natural=l.mobile.offsetHeight;
-      const scale=Math.min(1,available/Math.max(1,natural));
-      l.mobile.style.transform=`scale(${scale})`;
-      l.stage.style.height=`${natural*scale}px`;
-    }
+    for (const l of layouts) l.stage.toggleAttribute('data-native-scroll',narrow.matches);
     document.dispatchEvent(new Event('paper-layout'));
   }
   const sizeObserver=new ResizeObserver(fitSlides);
